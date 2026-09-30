@@ -140,7 +140,7 @@ jobs:
         run: |
           nix-shell \
             -I nixpkgs=./tools/nix/pkgs.nix \
-            --pure --keep SCCACHE_LOCAL_RW_MODE \
+            --pure --keep SCCACHE_LOCAL_RW_MODE --keep CATEGORIES \
             --arg useSeparateDerivationForV8 true \
             --arg withPerfetto ${{ matrix.perfetto || false }} \
             --arg loadJSBuiltinsDynamically false \
@@ -148,10 +148,14 @@ jobs:
             --arg devTools '[]' \
             --arg benchmarkTools '[]' \
             --run '
+                set -e
                 make build-ci -j4 V=1
+                # The napi benchmarks load addons of their own, both binaries use these.
+                if [[ " $CATEGORIES " == *" napi "* ]]; then make bench-addons-build; fi
             '
         env:
           SCCACHE_LOCAL_RW_MODE: READ_ONLY
+          CATEGORIES: ${{ inputs.category }}
 
       - name: Run benchmark
         run: |
